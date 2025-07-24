@@ -1,0 +1,204 @@
+﻿@model IEnumerable<BookShop.Models.Category>
+
+@{
+    ViewData["Title"] = "Category Management";
+}
+
+<!-- Include Eva Pharma CSS -->
+<link rel="stylesheet" href="~/css/eva-pharma.css" />
+
+<div class="container-fluid fade-in">
+    <!-- Header Section -->
+    <div class="category-header text-center">
+        <h1 class="category-title">Category Management</h1>
+        <p class="lead">Manage your pharmaceutical categories efficiently</p>
+    </div>
+
+    <!-- Action Section -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <a asp-action="CreateCategory" class="btn btn-eva-success btn-lg">
+                <i class="fas fa-plus"></i> Add New Category
+            </a>
+        </div>
+        <div class="col-md-6">
+            <!-- Search Form -->
+            <form method="get" asp-action="GetAllCategories" class="d-flex">
+                <input type="text" name="search" value="@ViewBag.CurrentSearch"
+                       class="form-control eva-search me-2"
+                       placeholder="Search by category name..." />
+                <button type="submit" class="btn btn-eva-primary">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Categories Table -->
+    @if (Model.Any())
+    {
+        <div class="eva-card slide-in">
+            <div class="table-responsive">
+                <table class="table eva-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>catName</th>
+                            <th>Available Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><strong>@item.Id</strong></td>
+                                <td>
+                                    <span class="fw-bold text-primary">@item.CatName</span>
+                                    <br>
+                                    <small class="text-muted">Order: @item.CatOrder</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a asp-action="Details" asp-route-id="@item.Id"
+                                           class="action-btn btn-view">
+                                            View
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id"
+                                           class="action-btn btn-edit">
+                                            Edit
+                                        </a>
+                                        <button type="button" class="action-btn btn-delete"
+                                                onclick="deleteCategory(@item.Id)">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="eva-card text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-folder-open fa-5x text-muted"></i>
+            </div>
+            <h3 class="text-muted">No categories found</h3>
+            @if (!string.IsNullOrEmpty(ViewBag.CurrentSearch as string))
+            {
+                <p class="text-muted mb-4">
+                    No results found for "<strong>@ViewBag.CurrentSearch</strong>"
+                </p>
+                <a asp-action="GetAllCategories" class="btn btn-eva-primary me-3">
+                    Show All Categories
+                </a>
+            }
+            <a asp-action="CreateCategory" class="btn btn-eva-success">
+                <i class="fas fa-plus"></i> Add Your First Category
+            </a>
+        </div>
+    }
+</div>
+
+<!-- Anti-forgery token for AJAX calls -->
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        function deleteCategory(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This category will be permanently deleted!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e74c3c',
+                cancelButtonColor: '#95a5a6',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                customClass: {
+                    confirmButton: 'btn btn-danger me-2',
+                    cancelButton: 'btn btn-secondary'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading
+                    Swal.fire({
+                        title: 'Deleting...',
+                        text: 'Please wait',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    $.ajax({
+                        url: '@Url.Action("Delete", "Category")' + '/' + id,
+                        type: 'POST',
+                        data: {
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    title: 'Deleted!',
+                                    text: 'Category has been deleted successfully.',
+                                    icon: 'success',
+                                    confirmButtonColor: '#27ae60',
+                                    customClass: {
+                                        confirmButton: 'btn btn-success'
+                                    },
+                                    buttonsStyling: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: 'Failed to delete category.',
+                                    icon: 'error',
+                                    confirmButtonColor: '#e74c3c',
+                                    customClass: {
+                                        confirmButton: 'btn btn-danger'
+                                    },
+                                    buttonsStyling: false
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Something went wrong. Please try again.',
+                                icon: 'error',
+                                confirmButtonColor: '#e74c3c',
+                                customClass: {
+                                    confirmButton: 'btn btn-danger'
+                                },
+                                buttonsStyling: false
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Add smooth animations on page load
+        $(document).ready(function() {
+            $('.eva-card').addClass('fade-in');
+            setTimeout(function() {
+                $('tbody tr').each(function(index) {
+                    $(this).delay(index * 100).queue(function() {
+                        $(this).addClass('fade-in').dequeue();
+                    });
+                });
+            }, 300);
+        });
+    </script>
+}

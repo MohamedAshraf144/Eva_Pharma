@@ -1,0 +1,45 @@
+﻿@model BookShop.Models.Category
+
+@{
+    ViewData["Title"] = "Create Category";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Create New Category</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="CreateCategory" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="CatName" class="form-label">Category Name</label>
+                            <input asp-for="CatName" class="form-control" placeholder="Enter category name" />
+                            <span asp-validation-for="CatName" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="CatOrder" class="form-label">Category Order</label>
+                            <input asp-for="CatOrder" class="form-control" type="number" placeholder="Enter display order" />
+                            <span asp-validation-for="CatOrder" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-action="GetAllCategories" class="btn btn-secondary me-md-2">Back to List</a>
+                            <button type="submit" class="btn btn-primary">Create</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
