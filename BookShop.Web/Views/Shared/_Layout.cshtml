@@ -3,76 +3,48 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Eva Pharma</title>
+    <title>@ViewData["Title"] - BookShop</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        /* Eva Pharma Custom Styles */
-        .navbar-brand {
-            font-weight: bold;
-            font-size: 1.5rem;
-        }
-
-        .eva-navbar {
-            background-color: #2c3e50 !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .eva-navbar .nav-link {
-            color: white !important;
-            font-weight: 500;
-            margin: 0 10px;
-            transition: color 0.3s ease;
-        }
-
-        .eva-navbar .nav-link:hover {
-            color: #3498db !important;
-        }
-
-        .eva-navbar .navbar-brand {
-            color: white !important;
-        }
-
-        body {
-            background-color: #f8f9fa;
-        }
-
-        .main-container {
-            min-height: calc(100vh - 120px);
-            padding: 20px 0;
-        }
-
-        .footer {
-            background-color: #2c3e50;
-            color: white;
-            padding: 20px 0;
-            margin-top: 40px;
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
+    <!-- Theme Toggle Button -->
+    <div class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+        <i class="fas fa-moon" id="themeIcon"></i>
+    </div>
+
     <header>
-        <nav class="navbar navbar-expand-lg eva-navbar">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm border-bottom box-shadow mb-3">
             <div class="container-fluid">
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
-                    Eva Pharma
+                    <i class="fas fa-book"></i> BookShop
                 </a>
-
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto">
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
+                                <i class="fas fa-home"></i> Home
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            <a class="nav-link" asp-area="" asp-controller="Category" asp-action="GetAllCategories">
+                                <i class="fas fa-tags"></i> Categories
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Category" asp-action="GetAllCategories">Categories</a>
+                            <a class="nav-link" asp-area="" asp-controller="Product" asp-action="Index">
+                                <i class="fas fa-book"></i> Products
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">
+                                <i class="fas fa-shield-alt"></i> Privacy
+                            </a>
                         </li>
                     </ul>
                 </div>
@@ -80,20 +52,71 @@
         </nav>
     </header>
 
-    <div class="container-fluid main-container">
-        <main role="main">
+    <div class="container">
+        <main role="main" class="pb-3">
+            <!-- Success/Error Messages -->
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle"></i> @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle"></i> @TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
             @RenderBody()
         </main>
     </div>
 
-    <footer class="footer text-center">
+    <footer class="border-top footer text-muted">
         <div class="container">
-            <span>&copy; 2025 - Eva Pharma - All Rights Reserved</span>
+            &copy; 2025 - BookShop - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
 
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <!-- Theme Toggle Script -->
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const body = document.body;
+
+        // Load saved theme
+        const currentTheme = localStorage.getItem('theme') || 'light';
+
+        if (currentTheme === 'dark') {
+            body.setAttribute('data-theme', 'dark');
+            themeIcon.className = 'fas fa-sun';
+        } else {
+            body.removeAttribute('data-theme');
+            themeIcon.className = 'fas fa-moon';
+        }
+
+        // Toggle theme
+        themeToggle.addEventListener('click', function() {
+            const currentTheme = body.getAttribute('data-theme');
+
+            if (currentTheme === 'dark') {
+                body.removeAttribute('data-theme');
+                themeIcon.className = 'fas fa-moon';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

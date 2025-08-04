@@ -1,28 +1,50 @@
-﻿using BookShop.DataAccess;
+﻿using BookShop.DataAccess.Repository.IRepository;
 using BookShop.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace BookShop.Web.Controllers
 {
     public class CategoryController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
+        private const int PageSize = 10;
 
-        public CategoryController(ApplicationDbContext context)
+        public CategoryController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET: Category
-        public async Task<IActionResult> GetAllCategories()
+        public async Task<IActionResult> GetAllCategories(int page = 1, string? search = null)
         {
-            var categories = await _context.Categories
-                .Where(c => !c.IsDeleted)
-                .OrderBy(c => c.CatOrder)
-                .ToListAsync();
+            var categories = await _unitOfWork.Category.GetAllAsync(
+                filter: c => !c.IsDeleted,
+                orderBy: q => q.OrderBy(c => c.CatOrder).ThenBy(c => c.CatName)
+            );
 
-            return View(categories);
+            // تطبيق البحث
+            if (!string.IsNullOrEmpty(search))
+            {
+                categories = categories.Where(c =>
+                    c.CatName.Contains(search, StringComparison.OrdinalIgnoreCase));
+                ViewBag.CurrentSearch = search;
+            }
+
+            // تطبيق Pagination
+            var categoriesList = categories.ToList();
+            var totalCategories = categoriesList.Count;
+            var paginatedCategories = categoriesList
+                .Skip((page - 1) * PageSize)
+                .Take(PageSize)
+                .ToList();
+
+            // إعداد ViewBag للـ Pagination
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling((double)totalCategories / PageSize);
+            ViewBag.HasPreviousPage = page > 1;
+            ViewBag.HasNextPage = page < ViewBag.TotalPages;
+
+            return View(paginatedCategories);
         }
 
         // GET: Category/Create
@@ -40,17 +62,17 @@ namespace BookShop.Web.Controllers
             {
                 category.CreatedDate = DateTime.Now;
                 category.IsDeleted = false;
+                category.IsActive = true;
 
-                _context.Categories.Add(category);
-                await _context.SaveChangesAsync();
+                _unitOfWork.Category.Add(category);
+                await _unitOfWork.SaveAsync();
 
+                TempData["Success"] = "Category created successfully!";
                 return RedirectToAction(nameof(GetAllCategories));
             }
 
             return View(category);
         }
-
-        // BONUS METHODS
 
         // GET: Category/Edit/5
         public async Task<IActionResult> Edit(int? id)
@@ -60,7 +82,7 @@ namespace BookShop.Web.Controllers
                 return NotFound();
             }
 
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _unitOfWork.Category.GetAsync(c => c.Id == id);
             if (category == null || category.IsDeleted)
             {
                 return NotFound();
@@ -83,12 +105,14 @@ namespace BookShop.Web.Controllers
             {
                 try
                 {
-                    _context.Update(category);
-                    await _context.SaveChangesAsync();
+                    _unitOfWork.Category.Update(category);
+                    await _unitOfWork.SaveAsync();
+
+                    TempData["Success"] = "Category updated successfully!";
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (Exception)
                 {
-                    if (!CategoryExists(category.Id))
+                    if (!await CategoryExistsAsync(category.Id))
                     {
                         return NotFound();
                     }
@@ -110,9 +134,7 @@ namespace BookShop.Web.Controllers
                 return NotFound();
             }
 
-            var category = await _context.Categories
-                .FirstOrDefaultAsync(m => m.Id == id && !m.IsDeleted);
-
+            var category = await _unitOfWork.Category.GetAsync(c => c.Id == id && !c.IsDeleted);
             if (category == null)
             {
                 return NotFound();
@@ -126,20 +148,41 @@ namespace BookShop.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _unitOfWork.Category.GetAsync(c => c.Id == id);
             if (category != null)
             {
                 category.IsDeleted = true; // Soft delete
-                _context.Update(category);
-                await _context.SaveChangesAsync();
+                _unitOfWork.Category.Update(category);
+                await _unitOfWork.SaveAsync();
+
+                TempData["Success"] = "Category deleted successfully!";
             }
 
             return Json(new { success = true });
         }
 
-        private bool CategoryExists(int id)
+        // POST: Toggle Active Status
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleStatus(int id)
         {
-            return _context.Categories.Any(e => e.Id == id && !e.IsDeleted);
+            var category = await _unitOfWork.Category.GetAsync(c => c.Id == id);
+            if (category != null && !category.IsDeleted)
+            {
+                category.IsActive = !category.IsActive;
+                _unitOfWork.Category.Update(category);
+                await _unitOfWork.SaveAsync();
+
+                TempData["Success"] = $"Category {(category.IsActive ? "activated" : "deactivated")} successfully!";
+            }
+
+            return RedirectToAction(nameof(GetAllCategories));
+        }
+
+        private async Task<bool> CategoryExistsAsync(int id)
+        {
+            var category = await _unitOfWork.Category.GetAsync(c => c.Id == id && !c.IsDeleted);
+            return category != null;
         }
     }
 }

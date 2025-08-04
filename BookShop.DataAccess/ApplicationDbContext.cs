@@ -1,4 +1,5 @@
 ﻿using BookShop.Models;
+using BookShop.Models.Configurations;
 using Microsoft.EntityFrameworkCore;
 
 namespace BookShop.DataAccess
@@ -10,20 +11,15 @@ namespace BookShop.DataAccess
         }
 
         public DbSet<Category> Categories { get; set; }
+        public DbSet<Product> Products { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Category>(entity =>
-            {
-                entity.ToTable("Categories", "MasterSchema");
-                entity.HasKey(c => c.Id);
-                entity.Property(c => c.CatName).IsRequired().HasMaxLength(50);
-                entity.Property(c => c.CatOrder).IsRequired();
-                entity.Property(c => c.IsDeleted).IsRequired().HasDefaultValue(false);
-                
-            });
+            // Apply Configuration Classes
+            modelBuilder.ApplyConfiguration(new CategoryConfiguration());
+            modelBuilder.ApplyConfiguration(new ProductConfiguration());
         }
     }
 }

@@ -1,0 +1,131 @@
+﻿@model BookShop.Models.Product
+
+@{
+    ViewData["Title"] = "Create Product";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-plus-circle"></i> Create Product</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card fade-in">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-edit"></i> Product Information</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label">
+                            <i class="fas fa-heading"></i> Title
+                        </label>
+                        <input asp-for="Title" class="form-control" required maxlength="50" placeholder="Enter product title" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                        <div class="form-text">Maximum 50 characters</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">
+                            <i class="fas fa-align-left"></i> Description
+                        </label>
+                        <textarea asp-for="Description" class="form-control" rows="4" maxlength="250" placeholder="Enter product description"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                        <div class="form-text">Maximum 250 characters</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Author" class="form-label">
+                            <i class="fas fa-user"></i> Author
+                        </label>
+                        <input asp-for="Author" class="form-control" required maxlength="50" placeholder="Enter author name" />
+                        <span asp-validation-for="Author" class="text-danger"></span>
+                        <div class="form-text">Maximum 50 characters</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Price" class="form-label">
+                            <i class="fas fa-dollar-sign"></i> Price ($)
+                        </label>
+                        <input asp-for="Price" class="form-control" type="number" step="0.01" min="1" max="1000" required placeholder="Enter price" />
+                        <span asp-validation-for="Price" class="text-danger"></span>
+                        <div class="form-text">Price must be between $1 and $1000</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="CategoryId" class="form-label">
+                            <i class="fas fa-tags"></i> Category
+                        </label>
+                        <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.CategoryList" required>
+                            <option value="">-- Select Category --</option>
+                        </select>
+                        <span asp-validation-for="CategoryId" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary me-md-2">
+                            <i class="fas fa-save"></i> Create Product
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // Real-time character counter
+        document.addEventListener('DOMContentLoaded', function() {
+            const titleInput = document.querySelector('input[name="Title"]');
+            const descriptionTextarea = document.querySelector('textarea[name="Description"]');
+            const authorInput = document.querySelector('input[name="Author"]');
+
+            // Add character counters
+            addCharacterCounter(titleInput, 50);
+            addCharacterCounter(descriptionTextarea, 250);
+            addCharacterCounter(authorInput, 50);
+
+            function addCharacterCounter(element, maxLength) {
+                if (!element) return;
+
+                const counter = document.createElement('small');
+                counter.className = 'text-muted float-end character-counter';
+                updateCounter();
+
+                // Insert counter after the help text
+                const helpText = element.parentNode.querySelector('.form-text');
+                if (helpText) {
+                    helpText.appendChild(counter);
+                }
+
+                element.addEventListener('input', updateCounter);
+
+                function updateCounter() {
+                    const remaining = maxLength - element.value.length;
+                    counter.textContent = `${element.value.length}/${maxLength}`;
+
+                    if (remaining < 10) {
+                        counter.className = 'text-warning float-end character-counter';
+                    } else if (remaining <= 0) {
+                        counter.className = 'text-danger float-end character-counter';
+                    } else {
+                        counter.className = 'text-muted float-end character-counter';
+                    }
+                }
+            }
+        });
+    </script>
+}
