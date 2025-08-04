@@ -22,7 +22,8 @@ namespace BookShop.Models.Configurations
                 .HasMaxLength(50);
 
             builder.Property(p => p.Description)
-                .HasMaxLength(250);
+                .HasMaxLength(250)
+                .IsRequired(false); // Description is optional
 
             builder.Property(p => p.Author)
                 .IsRequired()
@@ -31,7 +32,7 @@ namespace BookShop.Models.Configurations
             builder.Property(p => p.Price)
                 .IsRequired()
                 .HasColumnName("BookPrice")
-                .HasPrecision(18, 2); // للتحكم في دقة الأرقام العشرية
+                .HasPrecision(18, 2);
 
             // Foreign Key Configuration
             builder.Property(p => p.CategoryId)
@@ -41,7 +42,8 @@ namespace BookShop.Models.Configurations
             builder.HasOne(p => p.Category)
                 .WithMany(c => c.Products)
                 .HasForeignKey(p => p.CategoryId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false); // Navigation property is optional for model binding
 
             // Indexes for Performance
             builder.HasIndex(p => p.CategoryId)

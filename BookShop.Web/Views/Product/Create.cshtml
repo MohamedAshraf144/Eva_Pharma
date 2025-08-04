@@ -18,12 +18,14 @@
                 <h5 class="card-title mb-0"><i class="fas fa-edit"></i> Product Information</h5>
             </div>
             <div class="card-body">
-                <form asp-action="Create">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
                     <div class="mb-3">
                         <label asp-for="Title" class="form-label">
-                            <i class="fas fa-heading"></i> Title
+                            <i class="fas fa-heading"></i> Title *
                         </label>
                         <input asp-for="Title" class="form-control" required maxlength="50" placeholder="Enter product title" />
                         <span asp-validation-for="Title" class="text-danger"></span>
@@ -36,12 +38,12 @@
                         </label>
                         <textarea asp-for="Description" class="form-control" rows="4" maxlength="250" placeholder="Enter product description"></textarea>
                         <span asp-validation-for="Description" class="text-danger"></span>
-                        <div class="form-text">Maximum 250 characters</div>
+                        <div class="form-text">Maximum 250 characters (optional)</div>
                     </div>
 
                     <div class="mb-3">
                         <label asp-for="Author" class="form-label">
-                            <i class="fas fa-user"></i> Author
+                            <i class="fas fa-user"></i> Author *
                         </label>
                         <input asp-for="Author" class="form-control" required maxlength="50" placeholder="Enter author name" />
                         <span asp-validation-for="Author" class="text-danger"></span>
@@ -50,21 +52,28 @@
 
                     <div class="mb-3">
                         <label asp-for="Price" class="form-label">
-                            <i class="fas fa-dollar-sign"></i> Price ($)
+                            <i class="fas fa-dollar-sign"></i> Price ($) *
                         </label>
-                        <input asp-for="Price" class="form-control" type="number" step="0.01" min="1" max="1000" required placeholder="Enter price" />
+                        <input asp-for="Price" class="form-control" type="number" step="0.01" min="0.01" max="10000" required placeholder="0.00" />
                         <span asp-validation-for="Price" class="text-danger"></span>
-                        <div class="form-text">Price must be between $1 and $1000</div>
+                        <div class="form-text">Price between $0.01 and $10,000</div>
                     </div>
 
                     <div class="mb-4">
                         <label asp-for="CategoryId" class="form-label">
-                            <i class="fas fa-tags"></i> Category
+                            <i class="fas fa-tags"></i> Category *
                         </label>
                         <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.CategoryList" required>
                             <option value="">-- Select Category --</option>
                         </select>
                         <span asp-validation-for="CategoryId" class="text-danger"></span>
+                        @if (ViewBag.CategoryList == null || !((IEnumerable<SelectListItem>)ViewBag.CategoryList).Any())
+                        {
+                            <div class="alert alert-warning mt-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                No categories available. <a asp-controller="Category" asp-action="CreateCategory">Create a category first</a>.
+                            </div>
+                        }
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -87,13 +96,12 @@
     }
 
     <script>
-        // Real-time character counter
         document.addEventListener('DOMContentLoaded', function() {
+            // Real-time character counter
             const titleInput = document.querySelector('input[name="Title"]');
             const descriptionTextarea = document.querySelector('textarea[name="Description"]');
             const authorInput = document.querySelector('input[name="Author"]');
 
-            // Add character counters
             addCharacterCounter(titleInput, 50);
             addCharacterCounter(descriptionTextarea, 250);
             addCharacterCounter(authorInput, 50);
@@ -105,7 +113,6 @@
                 counter.className = 'text-muted float-end character-counter';
                 updateCounter();
 
-                // Insert counter after the help text
                 const helpText = element.parentNode.querySelector('.form-text');
                 if (helpText) {
                     helpText.appendChild(counter);

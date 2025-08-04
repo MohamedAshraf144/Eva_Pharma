@@ -8,59 +8,35 @@ namespace BookShop.Web.Controllers
     public class ProductController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<ProductController> _logger;
         private const int PageSize = 8;
 
-        public ProductController(IUnitOfWork unitOfWork)
+        public ProductController(IUnitOfWork unitOfWork, ILogger<ProductController> logger)
         {
             _unitOfWork = unitOfWork;
-        }
-
-        // GET: Product
-        public async Task<IActionResult> Index(int page = 1, int? categoryFilter = null, string? search = null)
-        {
-            var products = await _unitOfWork.Product.GetAllAsync(includeProperties: "Category");
-
-            // تطبيق البحث
-            if (!string.IsNullOrEmpty(search))
-            {
-                products = products.Where(p =>
-                    p.Title.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    p.Description.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    p.Author.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    p.Category.CatName.Contains(search, StringComparison.OrdinalIgnoreCase));
-                ViewBag.SearchTerm = search;
-            }
-
-            // تطبيق فلتر الكاتيجوري
-            if (categoryFilter.HasValue)
-            {
-                products = products.Where(p => p.CategoryId == categoryFilter.Value);
-                ViewBag.CategoryFilter = categoryFilter;
-            }
-
-            // تطبيق Pagination
-            var productsList = products.ToList();
-            var totalProducts = productsList.Count;
-            var paginatedProducts = productsList
-                .Skip((page - 1) * PageSize)
-                .Take(PageSize)
-                .ToList();
-
-            // إعداد ViewBag
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = (int)Math.Ceiling((double)totalProducts / PageSize);
-            ViewBag.HasPreviousPage = page > 1;
-            ViewBag.HasNextPage = page < ViewBag.TotalPages;
-            ViewBag.CategoryList = await GetCategorySelectListAsync();
-
-            return View(paginatedProducts);
+            _logger = logger;
         }
 
         // GET: Product/Create
         public async Task<IActionResult> Create()
         {
-            ViewBag.CategoryList = await GetCategorySelectListAsync();
-            return View();
+            try
+            {
+                _logger.LogInformation("Create GET action called");
+
+                var categoryList = await GetCategorySelectListAsync();
+                _logger.LogInformation($"Categories loaded: {categoryList.Count()}");
+
+                ViewBag.CategoryList = categoryList;
+
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in Create GET action");
+                TempData["Error"] = "Error loading create form: " + ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         // POST: Product/Create
@@ -68,17 +44,53 @@ namespace BookShop.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Product product)
         {
-            if (ModelState.IsValid)
+            try
             {
-                _unitOfWork.Product.Add(product);
-                await _unitOfWork.SaveAsync();
+                _logger.LogInformation("Create POST action called");
+                _logger.LogInformation($"Product data: {System.Text.Json.JsonSerializer.Serialize(product)}");
 
-                TempData["Success"] = "Product created successfully!";
-                return RedirectToAction(nameof(Index));
+                // إزالة الـ Category من الـ ModelState لأننا مش محتاجينها
+                ModelState.Remove("Category");
+
+                if (ModelState.IsValid)
+                {
+                    _logger.LogInformation("Model state is valid");
+
+                    // تأكد من إن الـ Category موجودة
+                    var categoryExists = await _unitOfWork.Category.GetAsync(c => c.Id == product.CategoryId && !c.IsDeleted && c.IsActive);
+                    if (categoryExists == null)
+                    {
+                        ModelState.AddModelError("CategoryId", "Selected category is not valid");
+                        ViewBag.CategoryList = await GetCategorySelectListAsync();
+                        return View(product);
+                    }
+
+                    _unitOfWork.Product.Add(product);
+                    await _unitOfWork.SaveAsync();
+
+                    _logger.LogInformation($"Product created with ID: {product.Id}");
+                    TempData["Success"] = "Product created successfully!";
+                    return RedirectToAction(nameof(Index));
+                }
+                else
+                {
+                    _logger.LogWarning("Model state is invalid");
+                    foreach (var error in ModelState)
+                    {
+                        _logger.LogWarning($"Field: {error.Key}, Errors: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
+                    }
+                }
+
+                ViewBag.CategoryList = await GetCategorySelectListAsync();
+                return View(product);
             }
-
-            ViewBag.CategoryList = await GetCategorySelectListAsync();
-            return View(product);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in Create POST action");
+                TempData["Error"] = "Error creating product: " + ex.Message;
+                ViewBag.CategoryList = await GetCategorySelectListAsync();
+                return View(product);
+            }
         }
 
         // GET: Product/Edit/5
@@ -108,6 +120,9 @@ namespace BookShop.Web.Controllers
             {
                 return NotFound();
             }
+
+            // إزالة الـ Category من الـ ModelState
+            ModelState.Remove("Category");
 
             if (ModelState.IsValid)
             {
@@ -170,19 +185,62 @@ namespace BookShop.Web.Controllers
             return Json(new { success = true });
         }
 
+        public async Task<IActionResult> Index(int page = 1, int? categoryFilter = null, string? search = null)
+        {
+            var products = await _unitOfWork.Product.GetAllAsync(includeProperties: "Category");
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                products = products.Where(p =>
+                    p.Title.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    p.Description.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    p.Author.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    p.Category.CatName.Contains(search, StringComparison.OrdinalIgnoreCase));
+                ViewBag.SearchTerm = search;
+            }
+
+            if (categoryFilter.HasValue)
+            {
+                products = products.Where(p => p.CategoryId == categoryFilter.Value);
+                ViewBag.CategoryFilter = categoryFilter;
+            }
+
+            var productsList = products.ToList();
+            var totalProducts = productsList.Count;
+            var paginatedProducts = productsList
+                .Skip((page - 1) * PageSize)
+                .Take(PageSize)
+                .ToList();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling((double)totalProducts / PageSize);
+            ViewBag.HasPreviousPage = page > 1;
+            ViewBag.HasNextPage = page < ViewBag.TotalPages;
+            ViewBag.CategoryList = await GetCategorySelectListAsync();
+
+            return View(paginatedProducts);
+        }
+
         private async Task<IEnumerable<SelectListItem>> GetCategorySelectListAsync()
         {
-            var categories = await _unitOfWork.Category.GetAllAsync(filter: c => !c.IsDeleted && c.IsActive);
-            var selectList = categories.Select(c => new SelectListItem
+            try
             {
-                Text = c.CatName,
-                Value = c.Id.ToString()
-            }).ToList();
+                var categories = await _unitOfWork.Category.GetAllAsync(filter: c => !c.IsDeleted && c.IsActive);
+                _logger.LogInformation($"Found {categories.Count()} active categories");
 
-            // إضافة خيار "All Categories" في البداية للفلتر
-            selectList.Insert(0, new SelectListItem { Text = "All Categories", Value = "" });
+                var selectList = categories.Select(c => new SelectListItem
+                {
+                    Text = c.CatName,
+                    Value = c.Id.ToString()
+                }).ToList();
 
-            return selectList;
+                return selectList;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading categories");
+                return new List<SelectListItem>();
+            }
         }
 
         private async Task<bool> ProductExistsAsync(int id)
